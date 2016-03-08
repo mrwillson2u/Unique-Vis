@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+body {
+  background: steelblue;
+}
+.node circle {
+  fill: #fff;
+  /*stroke: #000;*/
+  /*stroke-width: 1.5px;*/
+}
+
+.node {
+  font: "Verdana" 20px sans-serif;
+  color: #fff;
+
+}
+
+.link {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.5px;
+}
+
+</style>ç
+<body>
+
+<script src="https://cdn.firebase.com/js/client/2.4.0/firebase.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
+<script>
+
+// Fires as soon as all the content has loaded
+document.addEventListener('DOMContentLoaded', function() {
+  // var ref = new Firebase("https://unique-iq.firebaseio.com");
+  //ref.onAuth(authDataCallback);
+
+  // ref.on("value", function(test){
+  //   console.log(test.toString());
+  // })
+  var ref = new Firebase("https://unique-iq.firebaseio.com");
+  var userRef;
+  var firstLoad = true;
+  var currentObj = {};
+
+  //
+  // var authData = ref.getAuth();
+  // if (authData) {
+  //   console.log("User " + authData.uid + " is logged in with " + authData.provider);
+  // } else {
+  //   console.log("User is logged out. Logging in now!");
+  //
+  //   ref.authAnonymously(function(error, authData) {
+  //     if (error) {
+  //       console.log("Login Failed!", error);
+  //     } else {
+  //       console.log("Authenticated successfully with payload:", authData);
+  //     }
+  //   });
+
+  var userRef = userRef = ref.child('users');
+  console.log(userRef.toString());
+
+  userRef.on('value', function(snapshot){
+    console.log('snapshot.key(): ');
+    console.log(snapshot.val());
+
+
+    var originalObj = snapshot.val();
+    snapshot.forEach(function(user) {
+      console.log('user.key(): ');
+      console.log(user.key());
+      currentObj.name = "Me";
+      currentObj.children = [];
+      var count = 50;
+        user.child('URLS').forEach(function(site) {
+
+          var website = site.val();
+          console.log(website.Processed);
+
+          if(website.Processed === 'yes' && website.keyWords && count > 0) {
+            // Get the 5 higest keyWords
+
+            console.log(website.keyWords.length);
+            var keyWordList = [];
+            var keyString = "";
+            for(var i = 0; i < website.keyWords.length && i < 5 ; i++) {
+               keyWordList.push({name: website.keyWords[i].word, size: 4500});
+              //  keyString += website.keyWords[i].word;
+            }
+
+            var theUrl = website.URL;
+            console.log("tttt" + theUrl);
+            if(theUrl.length > 70) {
+              theUrl = theUrl.slice(0,50);
+            }
+
+
+            currentObj.children.push({name: theUrl, children: keyWordList, size: 200});
+            count--;
+          }
+        });
+
+    });
+  console.log("test: ");
+  console.log(currentObj);
+    // Select the section we want to apply our changes to
+   var svg = d3.select("body").transition();
+
+    if(firstLoad) {
+      console.log('firstLoad');
+      firstLoad = false;
+
+      drawVis(currentObj);
+    } else {
+      console.log('notFirst');
+      // drawVis(currentObj);
+      updateData(currentObj);
+    }
+  });
+
+
+
+  var diameter = window.innerWidth;
+
+  var tree = d3.layout.tree()
+      .size([360, diameter / 2 - 120])
+      .separation(function(a, b) { return (a.parent == b.parent ? 1 : 2) / a.depth; });
+
+  var diagonal = d3.svg.diagonal.radial()
+      .projection(function(d) { return [d.y, d.x / 180 * Math.PI]; });
+
+
+  var svg = d3.select("body").append("svg")
+      .attr("width", diameter)
+      .attr("height", diameter)
+    .append("g")
+      .attr("transform", "translate(" + diameter / 2 + "," + diameter / 2 + ")");
+
+
+
+
+  function drawVis(root) {
+
+
+    var nodes = tree.nodes(root),
+    links = tree.links(nodes);
+
+    var nodes = tree.nodes(root),
+    links = tree.links(nodes);
+
+
+
+    function x(d) { console.log(d); return d.y * Math.cos((d.x - 90) / 180 * Math.PI); }
+
+    function y(d) { return d.y * Math.sin((d.x - 90) / 180 * Math.PI); }
+
+    // var link = svg.selectAll(".link")
+    //     .data(data).enter()
+    //     .append("path")
+    //
+
+
+      var link = svg.selectAll(".link")
+          .data(links)
+        .enter().append("path")
+          .attr("class", "link")
+          .attr("d", diagonal)
+          .attr("d", function(d) {
+            return "M" + x(d.source) + "," + y(d.source) + "L" + x(d.target) + "," + y(d.target);
+          });
+
+      var node = svg.selectAll(".node")
+          .data(nodes)
+        .enter().append("g")
+          .attr("class", "node")
+          .attr("transform", function(d) {
+            var theX = d.x;
+            if(!theX) {
+              theX = 0;
+            }
+            return "rotate(" + (theX - 90) + ")translate(" + d.y + ")"; })
+
+            console.log('tree.nodes');
+                  console.log(tree.nodes(root));
+
+    node.append("circle")
+        .attr("r", 10);
+
+
+      node.append("text")
+          .attr("dy", ".31em")
+          .attr("text-anchor", "middle")
+          .attr("transform", function(d) { return d.x < 180 ? "" : "rotate(180)"; })
+          .style("font", "23px sans-serif")
+          .text(function(d) { return d.name; });
+            //  console.log(getThem[i].name);
+              // if(d.children[i] !== null) {
+                //  return getThem[0].children[0].name;
+              // }
+
+   }
+
+
+
+
+
+
+
+
+  d3.select(self.frameElement).style("height", diameter - 150 + "px");
+
+  // });
+  function updateData(data) {
+    // var oldNodes = tree.nodes(currentObj),
+    // oldLinks = tree.links(nodes);
+
+    var nodes = tree.nodes(data),
+    links = tree.links(nodes);
+
+    function x(d) { console.log(d); return d.y * Math.cos((d.x - 90) / 180 * Math.PI); }
+
+    function y(d) { return d.y * Math.sin((d.x - 90) / 180 * Math.PI); }
+
+
+
+    svg.selectAll('.link').remove();
+    svg.selectAll('.node').remove();
+
+    // var link = svg.selectAll(".link")
+    //     .data(data).enter()
+    //     .append("path")
+    //
+
+
+      var link = svg.selectAll(".link")
+          .data(links)
+        .enter().append("path")
+          .attr("class", "link")
+          .attr("d", diagonal)
+          .attr("d", function(d) {
+            return "M" + x(d.source) + "," + y(d.source) + "L" + x(d.target) + "," + y(d.target);
+          });
+
+
+
+    function x(d) { console.log(d); return d.y * Math.cos((d.x - 90) / 180 * Math.PI); }
+
+    function y(d) { return d.y * Math.sin((d.x - 90) / 180 * Math.PI); }
+
+    // var link = svg.selectAll(".link")
+    //     .data(data).enter()
+    //     .append("path")
+    //
+
+
+      var link = svg.selectAll(".link")
+          .data(links)
+        .enter().append("path")
+          .attr("class", "link")
+          .attr("d", diagonal)
+          .attr("d", function(d) {
+            return "M" + x(d.source) + "," + y(d.source) + "L" + x(d.target) + "," + y(d.target);
+          });
+
+      var node = svg.selectAll(".node")
+          .data(nodes)
+        .enter().append("g")
+          .attr("class", "node")
+          .attr("transform", function(d) {
+            var theX = d.x;
+            if(!theX) {
+              theX = 0;
+            }
+            return "rotate(" + (theX - 90) + ")translate(" + d.y + ")"; })
+
+            console.log('tree.nodes');
+                  console.log(tree.nodes(root));
+
+      node.append("circle")
+          .attr("r", 10);
+
+
+        node.append("text")
+            .attr("dy", ".31em")
+            .attr("text-anchor", "middle")
+            .attr("transform", function(d) { return d.x < 180 ? "" : "rotate(180)"; })
+            .style("font", "23px sans-serif")
+            .text(function(d) { return d.name; });
+  }
+
+
+});
+// ** Update data section (Called from the onclick)
+
+
+
+// d3.json("flare.json", function(error, root) {
+//   if (error) throw error;
+//
+//   var nodes = tree.nodes(root),
+//       links = tree.links(nodes);
+//
+//   var link = svg.selectAll(".link")
+//       .data(links)
+//     .enter().append("path")
+//       .attr("class", "link")
+//       .attr("d", diagonal);
+//
+//   var node = svg.selectAll(".node")
+//       .data(nodes)
+//     .enter().append("g")
+//       .attr("class", "node")
+//       .attr("transform", function(d) { return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")"; })
+//
+//   node.append("circle")
+//       .attr("r", 4.5);
+//
+//   node.append("text")
+//       .attr("dy", ".31em")
+//       .attr("text-anchor", function(d) { return d.x < 180 ? "start" : "end"; })
+//       .attr("transform", function(d) { return d.x < 180 ? "translate(8)" : "rotate(180)translate(-8)"; })
+//       .text(function(d) { return d.name; });
+// });
+
+</script>
